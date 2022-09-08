@@ -1,0 +1,98 @@
+
+main:
+    params: [name]
+    steps:
+    - assignStepStatus:
+        assign:
+          - statusCode: 0
+          - validateInputCount: 0
+    
+    - validateInput :
+        call: http.get
+        args:
+            url: https://us-central1-infoworkflow36.cloudfunctions.net/is_valid_input #?passedval=${name.input1} 
+            query:
+                input: ${name.input1}
+        result: statusCode
+        
+    - valueAssigned:
+        assign:
+            - validateInputCount: ${validateInputCount + 1}
+        
+    - checkStatusCode :
+        switch:
+        -   condition : ${statusCode.body.status == 429 or validateInputCount < 4}
+            next: validateInput
+        -   condition : ${statusCode.body.status > 399 or statusCode.body.status < 600}  #If the result is a 4XX/5XX, or a 2XX with message as “Fail” go directly to step 6
+            next: callProcess
+    
+    - callProcess :
+        call: http.post
+        args:
+            url: https://us-central1-infoworkflow36.cloudfunctions.net/process
+            body:
+                input: ${name.input1}
+        result: responseProcess
+   
+
+    #---------------
+    # - randomgen_function:
+    #     call: http.get
+    #     args:
+    #          url: https://us-central1-infoworkflow36.cloudfunctions.net/randomgen
+    #     result: randomgen_result
+    # - multiply_function:
+    #     call: http.post
+    #     args:
+    #         url: https://us-central1-infoworkflow36.cloudfunctions.net/multiply
+    #         body:
+    #             input: ${randomgen_result.body.random}
+    #     result: multiply_result
+    #-------------------------
+
+    #to connect to firestore
+    # - init:
+    #     assign:
+    #       - project_id: ${sys.get_env("infoworkflow36")}
+    #       - collection: "message_status_info"
+    #       - document: ${name.input1}
+    # - create_document:
+    #     call: googleapis.firestore.v1.projects.databases.documents.createDocument
+    #     args:
+    #         collectionId: ${collection}
+    #         parent: ${"projects/infoworkflow36/databases/(default)/documents"}  #${"projects/" + project_id + "/databases/(default)/documents"}
+    #         query:
+    #             documentId: ${document}
+    #         body:
+    #             fields:
+    #                 done:
+    #                     stringValue: valid_input_check
+    # - get_document:
+    #     call: googleapis.firestore.v1.projects.databases.documents.get
+    #     args:
+    #         name: ${"projects/" + project_id + "/databases/(default)/documents/" + collection + "/" + document}
+    #     result: got
+    # - check:
+    #     switch:
+    #         - condition: ${got.fields.fieldA.stringValue == "abc" AND int(got.fields.fieldB.integerValue) == 123}
+    #           next: export
+    # - failed:
+    #     raise: ${"got unexpected document" + "fieldA:" + got.fields.fieldA.stringValue + " fieldB:" + string(got.fields.fieldB.integerValue)}
+    # - export:
+    #     call: googleapis.firestore.v1.projects.databases.exportDocuments
+    #     args:
+    #         name: ${"projects/" + project_id + "/databases/(default)"}
+    #         body:
+    #             outputUriPrefix: "gs://a_dummy_bucket"  # Make sure this bucket exists.
+    #             collectionIds:
+    #                 - ${collection}
+    # - drop:
+    #     call: googleapis.firestore.v1.projects.databases.documents.delete
+    #     args:
+    #         name: ${"projects/" + project_id + "/databases/(default)/documents/" + collection + "/" + document}
+    # - the_end:
+    #     return: "SUCCESS"
+         
+    
+    - returnOutput:
+        return: ${statusCode.body.status} #statusCode.code
