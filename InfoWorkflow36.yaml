@@ -21,10 +21,10 @@ main:
         
     - checkStatusCode :
         switch:
-        -   condition : ${statusCode.body.status == 429 AND validateInputCount < 4}
-            next: validateInput
-        -   condition : ${statusCode.body.status > 399 AND statusCode.body.status < 600}
-            next: init1_big
+        - condition : ${statusCode.body.status == 429 AND validateInputCount < 4}
+          next: validateInput
+        - condition : ${statusCode.body.status > 399 AND statusCode.body.status < 600}
+          next: init1_big
     - init:
         assign:
             - project_id: ${sys.get_env("infoworkflow36")}
@@ -34,7 +34,7 @@ main:
         call: googleapis.firestore.v1.projects.databases.documents.createDocument
         args:
             collectionId: ${collection}
-            parent: ${"projects/infoworkflow36/databases/(default)/documents"}  #${"projects/" + project_id + "/databases/(default)/documents"}
+            parent: ${"projects/infoworkflow36/databases/(default)/documents"}
             query:
                  documentId: ${document}
             body:
@@ -45,13 +45,13 @@ main:
         call: googleapis.firestore.v1.projects.databases.documents.get
         args:
              name: ${"projects/infoworkflow36/databases/(default)/documents/" + collection + "/" + document}
-        result: got
+        result: gotOut
     - check:
         switch:
-            - condition: ${got.fields.done.stringValue == "valid_input_check"}
+            - condition: ${gotOut.fields.done.stringValue == "valid_input_check"}
               next: callProcess
     - failed:
-        raise: ${"got unexpected document value.." + "done:" + got.fields.done.stringValue}
+        raise: ${"got unexpected document value.." + "done:" + gotOut.fields.done.stringValue}
     - callProcess :
         call: http.post
         args:
@@ -61,7 +61,7 @@ main:
         result: responseProcess
     - assignProsss:
         assign:
-            - processVal: ${responseProcess.body.output} #i
+            - processVal: ${responseProcess.body.output} #i  ${responseProcess.body.output}
     - drop:
         call: googleapis.firestore.v1.projects.databases.documents.delete
         args:
@@ -87,4 +87,4 @@ main:
                 process: ${processVal}
         result: responseProcesstable         
     - returnOutput:
-        return: ${statusCode.body.status} 
+        return: [${responseProcesstable.body.name}, ${responseProcesstable.body.valid_input_check}, ${responseProcesstable.body.process}]

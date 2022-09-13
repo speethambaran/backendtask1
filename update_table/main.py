@@ -24,7 +24,6 @@ def data_to_table(request):
     rows_to_insert = [
         {u'name': x,'valid_input_check':y,'process':z,'timestamp':time_stamp}
     ]
-    #time.sleep(10) #180
     errors = client.insert_rows_json(table_id, rows_to_insert)
     if errors == []:
         print('new rows added')

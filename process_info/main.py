@@ -21,9 +21,9 @@ def process(request):
     errors = client.insert_rows_json(table_id, rows_to_insert)
     if errors == []:
         print('new rows added')
-        output = {"got sucess": x, "done": "sucess"}
+        output = {"got sucess": x, "output": "sucess"}
         return jsonify(output)
     else:
         print(f'not working:, {errors}')
-        output = {"got it": x, "done": "failed"}
+        output = {"got it": x, "output": "failed"}
         return jsonify(output)
